@@ -1,5 +1,6 @@
-const { verificarCredenciales, registrarUsuario, getUsuario } = require("./consultas")
+const { verificarCredenciales, registrarUsuario, getUsuario, getUsuarioId } = require("./consultas")
 const { actualizarProducto, agregarProducto, obtenerProductos, eliminarProducto, obtenerProducto } = require('./productos');
+const {agregarPedido} = require('./pedidos')
 
 const jwt = require("jsonwebtoken")
 const express = require('express')
@@ -18,49 +19,64 @@ app.use(express.json())
 
 app.post("/login", async (req,res)=>{
     try {
-        const {email,password} = req.body
-        await verificarCredenciales(email, password)
+        const {email,password, rol} = req.body
+        await verificarCredenciales(email, password,rol)
         const token = jwt.sign({email}, SECRET_KEY, {expiresIn:"30d"})
-        res.json(token)
-        console.log(token)
+        res.json({token})
+        console.log("Token generado:", token);
     } catch (error){
-        console.log(error)
-        res.status(error.code || 500).send(error)
+        console.log("Error en login:", error);
+        res.status(error.code || 500).json({ error: error.message });
     }})
     
-app.post("/usuarios", async (req, res) =>{
+app.post("/registro", async (req, res) =>{
     try {
         const usuario = req.body
-        console.log(usuario)
+        console.log("Registrando usuarios:",usuario)
         await registrarUsuario (usuario)
-        res.send ("Usuario creado con éxito")
+        const token = jwt.sign({ email: usuario.email }, SECRET_KEY, { expiresIn: "30d" });
+        res.json({
+            message: "Usuario creado con éxito",
+            token,
+            usuario: {
+                rol: usuario.rol,
+                nombre: usuario.nombre,
+                apellido: usuario.apellido,
+                nit: usuario.nit,
+                email: usuario.email,
+            }
+        });
         } catch (error){
-        res.status(500).send(error)
+            console.log("Error en registro:", error);
+            res.status(500).json({ error: error.message });
         }
 })
 
-app.get("/usuarios", async (req, res) => {
+app.get("/perfil", async (req, res) => {
     try {
         const Authorization = req.header("Authorization")
-        if (!Authorization || !Authorization.startsWith("Bearer ")) {
-            return res.status(400).send("Token no proporcionado o mal formado")
+        if (!Authorization){
+            return res.status(400).json({error:"Token no proporcionado"})
         }
-        const token = Authorization.split("Bearer ")[1]
-        jwt.verify(token,"az_AZ")
-        const {email} = jwt.decode(token)
-        
-        if (!email) {
-            throw { code: 400, message: "Token inválido o faltan datos en el payload" };
+        if(!Authorization.startsWith("Bearer ")) {
+            return res.status(400).json({error:"Token no proporcionado o mal formado"})
+        }
+        const token = Authorization.split(" ")[1]
+
+        const decoded = jwt.verify(token,SECRET_KEY)
+
+        if (!decoded.email) {
+            return res.status(400).json({error:"Token inválido o faltan datos en el payload"});
           }
-        const usuario = await getUsuario(email)
+        const usuario = await getUsuario(decoded.email)
         if (!usuario) {
             throw { code: 404, message: "Usuario no encontrado" };
         }
         console.log("Usuario encontrado:", usuario);
-        res.json([usuario])
+        res.json(usuario)
     } catch (error) {
-        console.error("Error en /usuarios:", error);
-        res.status(error.code || 500).send(error.message || error);   
+        console.error("Error en /perfil:", error);
+        res.status(error.code || 500).json({ error: error.message }); 
     }
 })
 
@@ -73,19 +89,39 @@ app.get("/productos", async(req,res) =>{
 
 app.post("/productos", async(req,res) =>{
    try {
-        const {codigo, nombre, marca, precio, stock, imagen1, imagen2, descripcion} = req.body
+        const producto = req.body
         const Authorization = req.header("Authorization")
-        const token = Authorization.split("Bearer ")[1]
-        jwt.verify(token,SECRET_KEY)
-        const { email } = jwt.decode(token)
-    await agregarProducto(codigo, nombre, marca, precio, stock, imagen1, imagen2, descripcion)
-    res.send(`Producto agregado exitosamente por el usuario ${email}`)
+
+        if (!Authorization || !Authorization.startsWith("Bearer ")) {
+            return res.status(400).json({ error: "Token no proporcionado o mal formado" });
+        }
+
+        const token = Authorization.split(" ")[1]
+        const decode = jwt.verify(token,SECRET_KEY)
+        const { email } = decode
+
+        const usuario_id = await getUsuarioId(email)
+        producto.usuario = email
+
+        await agregarProducto(producto)
+        res.json({
+            message: "Producto creado con éxito",
+            token,
+            producto: {
+                codigo: producto.codigo,
+                nombre: producto.nombre,
+                marca: producto.marca,
+                precio: producto.precio,
+                stock: producto.stock,
+                imagen1: producto.imagen1,
+                imagen2: producto.imagen2,
+                descripcion: producto.descripcion,
+                usuario_id:usuario_id
+            }
+        });
     } catch (error){
-        const {code} = error
-        if(code == "23502")
-            res.status(400)
-            .send("Se ha violado la restriccion NOT NULL en uno de los campos de la tabla")
-        res.status(500).send(error)
+        console.log("Error en registro:", error);
+        res.status(500).json({ error: error.message });
     }
 })
 
@@ -136,5 +172,40 @@ app.get("/productos/:id", reportarConsulta, async(req,res) =>{
     const producto = await obtenerProducto(id)
     res.json(producto)
 })
+
+//Endpoints Pedidos
+
+app.post("/pedidos", async(req,res) =>{
+    try {
+         const pedido = req.body
+         const Authorization = req.header("Authorization")
+ 
+         if (!Authorization || !Authorization.startsWith("Bearer ")) {
+             return res.status(400).json({ error: "Token no proporcionado o mal formado" });
+         }
+ 
+         const token = Authorization.split(" ")[1]
+         console.log(token)
+         const decode = jwt.verify(token,SECRET_KEY)
+         const { email } = decode
+ 
+         const usuario_id = await getUsuarioId(email)
+         pedido.usuario = email
+ 
+         await agregarPedido(pedido)
+         res.json({
+             message: "Pedido creado con éxito",
+             token,
+             pedido: {
+                 total: pedido.total,
+                 cantidad: pedido.cantidad,
+                 usuario_id:usuario_id
+             }
+         });
+     } catch (error){
+         console.log("Error en registro:", error);
+         res.status(500).json({ error: error.message });
+     }
+ })
 
 module.exports = server

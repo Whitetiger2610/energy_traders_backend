@@ -19,11 +19,14 @@ const listarProductos = async (id)=>{
     const result = await pool.query(consulta, [id])
 }
 
-const agregarProducto = async (codigo, nombre, marca, precio, stock, img1, img2, descripcion) =>{
-    const consulta = "INSERT INTO productos values (DEFAULT,$1,$2,$3,$4,$5,$6,$7,$8)"
-    const values = [codigo, nombre, marca, precio, stock, img1, img2, descripcion]
-    const result = await pool.query(consulta,values)
-    console.log("Producto agregado")
+const agregarProducto = async (producto) =>{
+
+    let {codigo, nombre, marca, precio, stock, imagen1, imagen2, descripcion, usuario_id} = producto
+
+    const values = [codigo, nombre, marca, precio, stock, imagen1, imagen2, descripcion,usuario_id]
+    const consulta = "INSERT INTO productos values (DEFAULT,$1,$2,$3,$4,$5,$6,$7,$8,$9)"
+    await pool.query(consulta,values)
+    console.log("Producto agregado por usuario ID: ", usuario_id)
 }
 
 const actualizarProducto = async (codigo, nombre, marca, precio, stock, img1, img2, descripcion,id) =>{
