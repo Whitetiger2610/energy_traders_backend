@@ -1,14 +1,6 @@
-const {Pool} = require('pg')
+const pool= require('./config/db')
 const bcrypt = require('bcryptjs')
 
-const pool = new Pool({
-    host: 'localhost',
-    user: 'postgres',
-    password: 'postgres',
-    database: 'energy_traders',
-    port: 5433,
-    allowExitOnIdle: true
-})
 
 const verificarCredenciales = async (email, password,rol) => {
    

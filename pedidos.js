@@ -1,14 +1,16 @@
-const {Pool} = require('pg')
-const bcrypt = require('bcryptjs')
+// const {Pool} = require('pg')
+// const bcrypt = require('bcryptjs')
 
-const pool = new Pool({
-    host: 'localhost',
-    user: 'postgres',
-    password: 'postgres',
-    database: 'energy_traders',
-    port: 5433,
-    allowExitOnIdle: true
-})
+// const pool = new Pool({
+//     host: 'localhost',
+//     user: 'postgres',
+//     password: 'postgres',
+//     database: 'energy_traders',
+//     port: 5433,
+//     allowExitOnIdle: true
+// })
+
+const pool= require('./config/db')
 
 const agregarPedido = async (pedido) =>{
 

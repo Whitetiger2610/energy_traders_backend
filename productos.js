@@ -1,13 +1,15 @@
-const {Pool} = require('pg')
+// const {Pool} = require('pg')
 
-const pool = new Pool({
-    host: 'localhost',
-    user: 'postgres',
-    password: 'postgres',
-    database: 'energy_traders',
-    port: 5433,
-    allowExitOnIdle: true
-})
+// const pool = new Pool({
+//     host: 'localhost',
+//     user: 'postgres',
+//     password: 'postgres',
+//     database: 'energy_traders',
+//     port: 5433,
+//     allowExitOnIdle: true
+// })
+const pool= require('./config/db')
+
 
 const obtenerProductos = async() =>{
     const {rows} = await pool.query("SELECT * FROM productos")
